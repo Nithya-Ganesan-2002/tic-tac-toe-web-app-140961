@@ -1,101 +1,257 @@
-import Image from "next/image";
+"use client";
+import React, { useState } from "react";
 
+// PUBLIC_INTERFACE
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // Board is 1D (0-8). null = empty, "X", "O"
+  const [board, setBoard] = useState<(null | "X" | "O")[]>(Array(9).fill(null));
+  const [xIsNext, setXIsNext] = useState(true);
+  const winner = calculateWinner(board);
+  const isDraw = board.every((v) => v) && !winner;
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // PUBLIC_INTERFACE
+  function handleClick(idx: number) {
+    if (board[idx] || winner) return;
+    const nextBoard = board.slice();
+    nextBoard[idx] = xIsNext ? "X" : "O";
+    setBoard(nextBoard);
+    setXIsNext(!xIsNext);
+  }
+  // PUBLIC_INTERFACE
+  function restart() {
+    setBoard(Array(9).fill(null));
+    setXIsNext(true);
+  }
+
+  // UI Styles: color variables
+  const primary = "#1976d2";
+  const accent = "#ff4081";
+  const secondary = "#424242";
+
+  // Styles for the cells and board, minimalistic, responsive (mobile friendly)
+  const cellStyle: React.CSSProperties = {
+    width: 64,
+    height: 64,
+    border: `1.5px solid ${secondary}20`,
+    fontSize: "2.1rem",
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: winner || isDraw ? "default" : "pointer",
+    transition: "background .15s",
+    background: "#fff",
+    color: secondary,
+    outline: "none"
+  };
+  const accentCell = {
+    color: accent,
+    textShadow: `0 1px 0 ${primary}20`,
+  };
+  const boardStyle: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 0,
+    background: "#fafbfc",
+    borderRadius: 12,
+    boxShadow: "0 2px 16px 2px #6a8ba225",
+    border: `2px solid ${primary}17`,
+    margin: "auto",
+    width: 202,
+    height: 202,
+    userSelect: "none"
+  };
+
+  // Status color
+  let status: string;
+  let statusColor = primary;
+  if (winner) {
+    status = `Winner: ${winner}`;
+    statusColor = accent;
+  } else if (isDraw) {
+    status = "It's a draw!";
+    statusColor = secondary;
+  } else {
+    status = `Turn: ${xIsNext ? "X" : "O"}`;
+    statusColor = primary;
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--background)",
+        color: "var(--foreground)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        fontFamily: "var(--font-geist-sans), Arial, sans-serif",
+        transition: "background 0.20s, color 0.20s",
+        padding: "2rem 0"
+      }}
+    >
+      <h1
+        style={{
+          letterSpacing: "0.06em",
+          marginBottom: 12,
+          fontSize: "2.3rem",
+          color: primary,
+          fontFamily: "inherit",
+          fontWeight: 900,
+        }}
+      >
+        Tic Tac Toe
+      </h1>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 32,
+        }}
+      >
+        {/* Board */}
+        <div style={boardStyle} aria-label="Tic Tac Toe Board">
+          {board.map((cell, i) => (
+            // PUBLIC_INTERFACE
+            <button
+              key={i}
+              style={{
+                ...cellStyle,
+                ...(winner && winnerCombo(board)?.includes(i)
+                  ? accentCell
+                  : {}),
+                borderTop:
+                  i > 2
+                    ? `1px solid ${secondary}22`
+                    : "1.5px solid transparent",
+                borderLeft:
+                  i % 3 !== 0
+                    ? `1px solid ${secondary}18`
+                    : "1.5px solid transparent",
+              }}
+              aria-label={`Cell ${i + 1}, ${cell ?? "empty"}`}
+              onClick={() => handleClick(i)}
+              tabIndex={winner || isDraw ? -1 : 0}
+              disabled={!!cell || !!winner}
+            >
+              {cell}
+            </button>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* Status & Controls */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+            minHeight: 70,
+            width: "100%",
+          }}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+          <div
+            style={{
+              fontSize: "1.15rem",
+              letterSpacing: "0.035em",
+              color: statusColor,
+              fontWeight: 600,
+              minHeight: 32,
+              textShadow: winner
+                ? `0 1px 0 #ff4081cc`
+                : isDraw
+                ? `0 2px 2px #4a4a4a1b`
+                : undefined,
+            }}
+            data-testid="status"
+            aria-live="polite"
+          >
+            {status}
+          </div>
+          <button
+            style={{
+              marginTop: 4,
+              padding: "0.5em 1.6em",
+              borderRadius: 99,
+              border: "none",
+              background: accent,
+              color: "#fff",
+              fontWeight: 700,
+              letterSpacing: ".07em",
+              boxShadow: "0 0.5px 3px 0.5px #ff40811d",
+              fontSize: "1rem",
+              cursor: "pointer",
+              transition: "background .2s,color .2s",
+              outline: "none"
+            }}
+            onClick={restart}
+            aria-label="Restart the game"
+            data-testid="restart-btn"
+          >
+            Restart
+          </button>
+        </div>
+      </div>
+      <footer
+        style={{
+          marginTop: 44,
+          fontSize: 14,
+          color: "#aaa",
+          opacity: 0.7,
+          letterSpacing: "0.05em",
+          textAlign: "center",
+        }}
+      >
+        Minimalistic Tic Tac Toe &mdash; Made with Next.js
       </footer>
     </div>
   );
+}
+
+// PUBLIC_INTERFACE
+/**
+ * Returns "X" or "O" if there's a winner, otherwise null.
+ */
+function calculateWinner(
+  board: (null | "X" | "O")[]
+): "X" | "O" | null {
+  const combos = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
+    [0, 4, 8], [2, 4, 6], // dias
+  ];
+  for (const [a, b, c] of combos) {
+    if (
+      board[a] &&
+      board[a] === board[b] &&
+      board[a] === board[c]
+    ) {
+      return board[a];
+    }
+  }
+  return null;
+}
+
+// PUBLIC_INTERFACE
+/**
+ * If there is a winner, returns the combination array; else null.
+ */
+function winnerCombo(board: (null | "X" | "O")[]): number[] | null {
+  const combos = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6],
+  ];
+  for (const combo of combos) {
+    const [a, b, c] = combo;
+    if (
+      board[a] &&
+      board[a] === board[b] &&
+      board[a] === board[c]
+    ) {
+      return combo;
+    }
+  }
+  return null;
 }
